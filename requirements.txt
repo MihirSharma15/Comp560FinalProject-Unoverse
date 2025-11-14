@@ -1,0 +1,21 @@
+# Core Dependencies for Comp560FinalProject-Unoverse
+# Install with: pip install -r requirements.txt
+
+# Reinforcement Learning Environment
+gymnasium>=0.29.0
+
+# Numerical Computing
+numpy>=1.24.0
+
+# Visualization
+matplotlib>=3.7.0
+seaborn>=0.12.0
+plotly>=5.14.0
+kaleido>=0.2.1
+
+# Progress Tracking
+tqdm>=4.65.0
+
+# Note: tkinter is typically included with Python
+# If tkinter is missing, install python3-tk via your system package manager
+

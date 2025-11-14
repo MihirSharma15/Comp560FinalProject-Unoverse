@@ -1,0 +1,15 @@
+[project]
+name = "comp560finalproject-unoverse"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "gym>=0.26.2",
+    "gymnasium>=1.2.2",
+    "kaleido>=1.2.0",
+    "matplotlib>=3.10.7",
+    "plotly>=6.4.0",
+    "seaborn>=0.13.2",
+    "tqdm>=4.67.1",
+]
