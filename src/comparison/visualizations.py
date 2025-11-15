@@ -21,7 +21,8 @@ def plot_q_values_3d(
     agent: BaseAgent,
     agent_name: str,
     action: int = 1,
-    save_path: Optional[str] = None
+    save_path: Optional[str] = None,
+    z_limits: Optional[tuple] = None
 ) -> None:
     """Create 3D surface plot of Q-values across state space.
     
@@ -30,6 +31,7 @@ def plot_q_values_3d(
         agent_name: Name of the agent for title
         action: Which action to visualize (0=stick, 1=hit)
         save_path: Optional path to save the figure
+        z_limits: Optional tuple of (min, max) for z-axis limits across all agents
     """
     # Define state space ranges
     player_sums = np.arange(4, 22)  # 4-21
@@ -54,14 +56,24 @@ def plot_q_values_3d(
                 else:
                     Z[i, j] = 0.0
         
-        # Create surface plot
-        surf = ax.plot_surface(X, Y, Z, cmap=cm.coolwarm, linewidth=0, antialiased=True, alpha=0.8)
+        # Create surface plot with consistent color scale
+        if z_limits:
+            vmin, vmax = z_limits
+            surf = ax.plot_surface(X, Y, Z, cmap=cm.coolwarm, linewidth=0, 
+                                  antialiased=True, alpha=0.8, vmin=vmin, vmax=vmax)
+        else:
+            surf = ax.plot_surface(X, Y, Z, cmap=cm.coolwarm, linewidth=0, 
+                                  antialiased=True, alpha=0.8)
         
         # Customize plot
         ax.set_xlabel('Dealer Showing', fontsize=10)
         ax.set_ylabel('Player Sum', fontsize=10)
         ax.set_zlabel(f'Q-value ({"Hit" if action == 1 else "Stick"})', fontsize=10)
         ax.set_title(f'{"Usable" if usable_ace else "No"} Ace', fontsize=12, fontweight='bold')
+        
+        # Set consistent z-axis limits if provided
+        if z_limits:
+            ax.set_zlim(z_limits)
         
         # Add colorbar
         fig.colorbar(surf, ax=ax, shrink=0.5, aspect=5)
@@ -84,7 +96,8 @@ def plot_q_values_3d(
 def plot_epsilon_values_3d(
     agent: AdaptiveEpsilonAgent,
     agent_name: str,
-    save_path: Optional[str] = None
+    save_path: Optional[str] = None,
+    z_limits: Optional[tuple] = None
 ) -> None:
     """Create 3D surface plot of epsilon values across state space.
     
@@ -92,6 +105,7 @@ def plot_epsilon_values_3d(
         agent: Adaptive epsilon agent to visualize
         agent_name: Name of the agent for title
         save_path: Optional path to save the figure
+        z_limits: Optional tuple of (min, max) for z-axis limits across all agents
     """
     if not isinstance(agent, AdaptiveEpsilonAgent):
         print(f"Skipping epsilon 3D plot for {agent_name} (not an AdaptiveEpsilonAgent)")
@@ -117,14 +131,24 @@ def plot_epsilon_values_3d(
                 state = (player_sum, dealer_card, usable_ace)
                 Z[i, j] = agent.get_epsilon_for_state(state)
         
-        # Create surface plot
-        surf = ax.plot_surface(X, Y, Z, cmap=cm.viridis, linewidth=0, antialiased=True, alpha=0.8)
+        # Create surface plot with consistent color scale
+        if z_limits:
+            vmin, vmax = z_limits
+            surf = ax.plot_surface(X, Y, Z, cmap=cm.viridis, linewidth=0, 
+                                  antialiased=True, alpha=0.8, vmin=vmin, vmax=vmax)
+        else:
+            surf = ax.plot_surface(X, Y, Z, cmap=cm.viridis, linewidth=0, 
+                                  antialiased=True, alpha=0.8)
         
         # Customize plot
         ax.set_xlabel('Dealer Showing', fontsize=10)
         ax.set_ylabel('Player Sum', fontsize=10)
         ax.set_zlabel('Epsilon Value', fontsize=10)
         ax.set_title(f'{"Usable" if usable_ace else "No"} Ace', fontsize=12, fontweight='bold')
+        
+        # Set consistent z-axis limits if provided
+        if z_limits:
+            ax.set_zlim(z_limits)
         
         # Add colorbar
         fig.colorbar(surf, ax=ax, shrink=0.5, aspect=5)
@@ -970,21 +994,75 @@ def generate_all_visualizations(
     plot_policy_difference_heatmap(agents_dict, 
                                    save_path=os.path.join(save_dir, "policy_differences.png"))
     
-    # 9. Individual agent visualizations
+    # 9. Compute global scales for consistent comparison
+    print("\n📊 Computing global scales for consistent visualization...")
+    
+    # Define state space for scanning
+    player_sums = np.arange(4, 22)
+    dealer_cards = np.arange(1, 11)
+    
+    # Compute global Q-value ranges for each action
+    q_mins = {0: float('inf'), 1: float('inf')}
+    q_maxs = {0: float('-inf'), 1: float('-inf')}
+    
+    for agent in agents_dict.values():
+        if isinstance(agent, SimpleAgent):
+            for action in [0, 1]:
+                for player_sum in player_sums:
+                    for dealer_card in dealer_cards:
+                        for usable_ace in [False, True]:
+                            state = (player_sum, dealer_card, usable_ace)
+                            q_val = agent.get_q_value(state, action)
+                            q_mins[action] = min(q_mins[action], q_val)
+                            q_maxs[action] = max(q_maxs[action], q_val)
+    
+    # Compute global epsilon ranges for adaptive agents
+    epsilon_min = float('inf')
+    epsilon_max = float('-inf')
+    
+    for agent in agents_dict.values():
+        if isinstance(agent, AdaptiveEpsilonAgent):
+            for player_sum in player_sums:
+                for dealer_card in dealer_cards:
+                    for usable_ace in [False, True]:
+                        state = (player_sum, dealer_card, usable_ace)
+                        eps_val = agent.get_epsilon_for_state(state)
+                        epsilon_min = min(epsilon_min, eps_val)
+                        epsilon_max = max(epsilon_max, eps_val)
+    
+    # Set limits with small padding
+    q_limits_hit = (q_mins[1] * 1.05 if q_mins[1] < 0 else q_mins[1] * 0.95,
+                    q_maxs[1] * 1.05 if q_maxs[1] > 0 else q_maxs[1] * 0.95)
+    q_limits_stick = (q_mins[0] * 1.05 if q_mins[0] < 0 else q_mins[0] * 0.95,
+                      q_maxs[0] * 1.05 if q_maxs[0] > 0 else q_maxs[0] * 0.95)
+    
+    if epsilon_min != float('inf'):
+        epsilon_limits = (max(0, epsilon_min - 0.05), min(1, epsilon_max + 0.05))
+    else:
+        epsilon_limits = (0, 1)
+    
+    print(f"  Q-value range (Hit): [{q_limits_hit[0]:.3f}, {q_limits_hit[1]:.3f}]")
+    print(f"  Q-value range (Stick): [{q_limits_stick[0]:.3f}, {q_limits_stick[1]:.3f}]")
+    print(f"  Epsilon range: [{epsilon_limits[0]:.3f}, {epsilon_limits[1]:.3f}]")
+    
+    # 10. Individual agent visualizations with consistent scales
     for agent_name, agent in agents_dict.items():
         print(f"\n📈 Creating visualizations for {agent_name}...")
         
-        # Q-value 3D plots
+        # Q-value 3D plots with consistent scales
         safe_name = agent_name.replace(" ", "_").replace("(", "").replace(")", "").replace("=", "")
         plot_q_values_3d(agent, agent_name, action=1,
-                        save_path=os.path.join(save_dir, f"q_values_3d_hit_{safe_name}.png"))
+                        save_path=os.path.join(save_dir, f"q_values_3d_hit_{safe_name}.png"),
+                        z_limits=q_limits_hit)
         plot_q_values_3d(agent, agent_name, action=0,
-                        save_path=os.path.join(save_dir, f"q_values_3d_stick_{safe_name}.png"))
+                        save_path=os.path.join(save_dir, f"q_values_3d_stick_{safe_name}.png"),
+                        z_limits=q_limits_stick)
         
-        # Epsilon 3D plot (for adaptive agents)
+        # Epsilon 3D plot (for adaptive agents) with consistent scales
         if isinstance(agent, AdaptiveEpsilonAgent):
             plot_epsilon_values_3d(agent, agent_name,
-                                  save_path=os.path.join(save_dir, f"epsilon_3d_{safe_name}.png"))
+                                  save_path=os.path.join(save_dir, f"epsilon_3d_{safe_name}.png"),
+                                  z_limits=epsilon_limits)
         
         # Policy heatmap
         plot_policy_heatmap(agent, agent_name,
