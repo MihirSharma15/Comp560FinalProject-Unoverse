@@ -683,6 +683,238 @@ def plot_learning_convergence(
     plt.close()
 
 
+def plot_convergence_envelope(
+    results: Dict[str, Dict],
+    window_size: int = 5000,
+    envelope_percentiles: tuple = (10, 90),
+    save_path: Optional[str] = None
+) -> None:
+    """Plot convergence detection via mean envelope drift analysis.
+    
+    Shows when the smoothed central tendency stops drifting upward/downward.
+    Convergence is detected when the mean envelope stabilizes into a band.
+    
+    Args:
+        results: Dictionary mapping agent names to their results
+        window_size: Window size for computing rolling statistics
+        envelope_percentiles: Tuple of (lower, upper) percentiles for envelope
+        save_path: Optional path to save the figure
+    """
+    fig, axes = plt.subplots(len(results), 1, figsize=(14, 5 * len(results)))
+    if len(results) == 1:
+        axes = [axes]
+    
+    colors = sns.color_palette("husl", len(results))
+    
+    for idx, (agent_name, data) in enumerate(results.items()):
+        ax = axes[idx]
+        
+        if data['train'] is None:
+            ax.text(0.5, 0.5, f'{agent_name}: No training data', 
+                   ha='center', va='center', fontsize=12)
+            ax.set_xlim(0, 1)
+            ax.set_ylim(0, 1)
+            continue
+        
+        rewards = np.array(data['train']['total_rewards'])
+        
+        if len(rewards) < window_size:
+            ax.text(0.5, 0.5, f'{agent_name}: Insufficient data', 
+                   ha='center', va='center', fontsize=12)
+            continue
+        
+        # Compute rolling statistics
+        rolling_mean = np.convolve(rewards, np.ones(window_size)/window_size, mode='valid')
+        
+        # Compute rolling percentiles for envelope
+        lower_env = []
+        upper_env = []
+        for i in range(len(rewards) - window_size + 1):
+            window = rewards[i:i+window_size]
+            lower_env.append(np.percentile(window, envelope_percentiles[0]))
+            upper_env.append(np.percentile(window, envelope_percentiles[1]))
+        
+        lower_env = np.array(lower_env)
+        upper_env = np.array(upper_env)
+        
+        x = np.arange(window_size-1, len(rewards))
+        
+        # Plot envelope cloud
+        ax.fill_between(x, lower_env, upper_env, alpha=0.2, color=colors[idx], 
+                        label=f'{envelope_percentiles[0]}-{envelope_percentiles[1]}th percentile')
+        
+        # Plot mean line
+        ax.plot(x, rolling_mean, linewidth=2.5, color=colors[idx], 
+               label='Rolling Mean', alpha=0.9)
+        
+        # Detect convergence: when mean stops drifting
+        # Use derivative of rolling mean
+        mean_derivative = np.diff(rolling_mean)
+        smoothed_derivative = np.convolve(mean_derivative, 
+                                         np.ones(window_size//10)/(window_size//10), 
+                                         mode='valid')
+        
+        # Find where derivative variance becomes small (stable)
+        if len(smoothed_derivative) > window_size//5:
+            # Split into chunks and compute variance
+            chunk_size = max(1, len(smoothed_derivative) // 20)
+            variances = []
+            positions = []
+            for i in range(0, len(smoothed_derivative) - chunk_size, chunk_size):
+                chunk = smoothed_derivative[i:i+chunk_size]
+                variances.append(np.var(chunk))
+                positions.append(x[i + window_size//10])
+            
+            # Find first point where variance stays below threshold
+            if variances:
+                threshold = np.percentile(variances, 25)  # Lower quartile
+                converged_idx = None
+                for i, var in enumerate(variances):
+                    if var < threshold:
+                        # Check if it stays low
+                        if i < len(variances) - 3:
+                            if all(v < threshold * 1.5 for v in variances[i:i+3]):
+                                converged_idx = i
+                                break
+                
+                if converged_idx is not None:
+                    convergence_episode = positions[converged_idx]
+                    ax.axvline(x=convergence_episode, color='red', 
+                             linestyle='--', alpha=0.7, linewidth=2,
+                             label=f'Envelope Stabilizes ~{convergence_episode:,}')
+        
+        # Customize subplot
+        ax.set_xlabel('Training Episode', fontsize=11, fontweight='bold')
+        ax.set_ylabel('Reward', fontsize=11, fontweight='bold')
+        ax.set_title(f'{agent_name}: Convergence via Envelope Drift', 
+                    fontsize=13, fontweight='bold')
+        ax.legend(fontsize=9, loc='lower right')
+        ax.grid(alpha=0.3)
+        ax.axhline(y=0, color='black', linestyle='--', linewidth=1, alpha=0.3)
+    
+    fig.suptitle('Convergence Detection: Mean Envelope Stabilization', 
+                 fontsize=15, fontweight='bold')
+    plt.tight_layout()
+    
+    if save_path:
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        plt.savefig(save_path, dpi=150, bbox_inches='tight')
+        print(f"Saved convergence envelope plot to {save_path}")
+    
+    plt.close()
+
+
+def plot_q_value_change_derivative(
+    results: Dict[str, Dict],
+    window_size: int = 1000,
+    save_path: Optional[str] = None
+) -> None:
+    """Plot Q-value change derivative to detect convergence.
+    
+    Convergence is indicated when the derivative (slope) of Q-value changes
+    approaches zero, typically after significant training episodes.
+    
+    Args:
+        results: Dictionary mapping agent names to their results  
+        window_size: Window size for smoothing the derivative
+        save_path: Optional path to save the figure
+    """
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10))
+    
+    colors = sns.color_palette("husl", len(results))
+    
+    for idx, (agent_name, data) in enumerate(results.items()):
+        if data['train'] is None:
+            continue
+        
+        # For Q-value changes, we can use the reward variance or 
+        # approximate from episode-to-episode reward changes
+        rewards = np.array(data['train']['total_rewards'])
+        
+        if len(rewards) < window_size * 2:
+            print(f"Skipping {agent_name}: insufficient data for derivative analysis")
+            continue
+        
+        # Compute episode-to-episode changes (proxy for Q-value updates)
+        # The magnitude of reward changes correlates with Q-value updates
+        episode_changes = np.abs(np.diff(rewards))
+        
+        # Smooth the changes
+        smoothed_changes = np.convolve(episode_changes, 
+                                      np.ones(window_size)/window_size, 
+                                      mode='valid')
+        
+        x1 = np.arange(window_size, len(rewards))
+        
+        # Plot 1: Magnitude of changes
+        ax1.plot(x1, smoothed_changes, linewidth=2, alpha=0.8, 
+                color=colors[idx], label=agent_name)
+        
+        # Compute derivative of changes (rate of change of change)
+        derivative = np.diff(smoothed_changes)
+        # Smooth the derivative
+        if len(derivative) >= window_size//2:
+            smoothed_derivative = np.convolve(derivative, 
+                                             np.ones(window_size//2)/(window_size//2),
+                                             mode='valid')
+            x2 = np.arange(window_size + window_size//2, len(rewards))
+            
+            # Plot 2: Derivative (slope)
+            ax2.plot(x2, smoothed_derivative, linewidth=2, alpha=0.8,
+                    color=colors[idx], label=agent_name)
+            
+            # Find convergence: where derivative approaches zero and stays there
+            abs_derivative = np.abs(smoothed_derivative)
+            threshold = np.percentile(abs_derivative, 10)  # Low threshold
+            
+            # Find sustained low derivative
+            below_threshold = abs_derivative < threshold
+            if np.any(below_threshold):
+                # Find first sustained period
+                min_sustain = max(1, len(below_threshold) // 20)
+                for i in range(len(below_threshold) - min_sustain):
+                    if np.all(below_threshold[i:i+min_sustain]):
+                        convergence_ep = x2[i]
+                        ax2.axvline(x=convergence_ep, color=colors[idx],
+                                   linestyle='--', alpha=0.5, linewidth=1.5)
+                        ax2.text(convergence_ep, ax2.get_ylim()[1] * 0.9,
+                                f'{convergence_ep:,}',
+                                rotation=90, va='top', ha='right', 
+                                fontsize=8, color=colors[idx],
+                                bbox=dict(boxstyle='round,pad=0.3', 
+                                        facecolor='white', alpha=0.7))
+                        break
+    
+    # Customize plot 1
+    ax1.set_xlabel('Training Episode', fontsize=12, fontweight='bold')
+    ax1.set_ylabel('|Reward Change| (smoothed)', fontsize=12, fontweight='bold')
+    ax1.set_title('Magnitude of Episode-to-Episode Changes', 
+                  fontsize=13, fontweight='bold')
+    ax1.legend(fontsize=10, loc='upper right')
+    ax1.grid(alpha=0.3)
+    ax1.set_yscale('log')  # Log scale to see convergence better
+    
+    # Customize plot 2  
+    ax2.set_xlabel('Training Episode', fontsize=12, fontweight='bold')
+    ax2.set_ylabel('d(Change)/d(Episode) (smoothed)', fontsize=12, fontweight='bold')
+    ax2.set_title('Derivative of Changes → Zero Indicates Convergence', 
+                  fontsize=13, fontweight='bold')
+    ax2.legend(fontsize=10, loc='upper right')
+    ax2.grid(alpha=0.3)
+    ax2.axhline(y=0, color='black', linestyle='-', linewidth=1, alpha=0.5)
+    
+    fig.suptitle('Q-Value Change Derivative Analysis for Convergence Detection', 
+                 fontsize=15, fontweight='bold')
+    plt.tight_layout()
+    
+    if save_path:
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        plt.savefig(save_path, dpi=150, bbox_inches='tight')
+        print(f"Saved Q-value change derivative plot to {save_path}")
+    
+    plt.close()
+
+
 def generate_all_visualizations(
     results: Dict[str, Dict],
     agents_dict: Dict[str, BaseAgent],
@@ -723,12 +955,22 @@ def generate_all_visualizations(
     plot_learning_convergence(results, window_size=10_000,
                               save_path=os.path.join(save_dir, "learning_convergence.png"))
     
-    # 6. Policy difference heatmap
+    # 6. Convergence envelope analysis (new)
+    print("Creating convergence envelope plot...")
+    plot_convergence_envelope(results, window_size=5000,
+                             save_path=os.path.join(save_dir, "convergence_envelope.png"))
+    
+    # 7. Q-value change derivative analysis (new)
+    print("📉 Creating Q-value change derivative plot...")
+    plot_q_value_change_derivative(results, window_size=1000,
+                                   save_path=os.path.join(save_dir, "q_value_derivative.png"))
+    
+    # 8. Policy difference heatmap
     print("🔀 Creating policy difference heatmap...")
     plot_policy_difference_heatmap(agents_dict, 
                                    save_path=os.path.join(save_dir, "policy_differences.png"))
     
-    # 7. Individual agent visualizations
+    # 9. Individual agent visualizations
     for agent_name, agent in agents_dict.items():
         print(f"\n📈 Creating visualizations for {agent_name}...")
         

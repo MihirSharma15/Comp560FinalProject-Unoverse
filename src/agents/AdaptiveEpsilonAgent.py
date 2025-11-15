@@ -137,17 +137,24 @@ class AdaptiveEpsilonAgent(SimpleAgent):
         """
         state = self._obs_to_state(obs)
         
-        # Compute state-specific epsilon BEFORE incrementing count
-        # This ensures epsilon reflects prior experience, not current visit
-        state_epsilon = self._compute_state_epsilon(state)
+        # Check if we're in evaluation mode (epsilon set to 0)
+        # If so, use greedy policy regardless of state visit counts
+        if self.epsilon == 0.0:
+            state_epsilon = 0.0
+        else:
+            # Compute state-specific epsilon BEFORE incrementing count
+            # This ensures epsilon reflects prior experience, not current visit
+            state_epsilon = self._compute_state_epsilon(state)
         
         # Increment visit count for this state (after computing epsilon)
-        if self.state_counts[state] == 0:
-            self.unique_states_visited += 1
-        self.state_counts[state] += 1
-        
-        # Track epsilon history for this state
-        self.epsilon_history[state].append(state_epsilon)
+        # Only increment during training (not during evaluation)
+        if self.epsilon > 0.0:
+            if self.state_counts[state] == 0:
+                self.unique_states_visited += 1
+            self.state_counts[state] += 1
+            
+            # Track epsilon history for this state
+            self.epsilon_history[state].append(state_epsilon)
         
         # Get valid actions if not provided
         if valid_actions is None:

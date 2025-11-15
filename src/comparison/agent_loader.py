@@ -203,6 +203,62 @@ def load_agent(filepath: str) -> Optional[BaseAgent]:
     return agent
 
 
+def save_agent_with_stats(agent: BaseAgent, training_stats: Dict, filepath: str) -> None:
+    """Save a trained agent and its training statistics to disk.
+    
+    Args:
+        agent: The agent to save
+        training_stats: Training statistics dictionary (including total_rewards history)
+        filepath: Path to save the agent (will add .pkl extension if not present)
+    """
+    if not filepath.endswith('.pkl'):
+        filepath += '.pkl'
+    
+    # Create directory if it doesn't exist
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    
+    # Save agent
+    with open(filepath, 'wb') as f:
+        pickle.dump(agent, f)
+    
+    # Save training stats separately
+    stats_filepath = filepath.replace('.pkl', '_stats.pkl')
+    with open(stats_filepath, 'wb') as f:
+        pickle.dump(training_stats, f)
+    
+    print(f"Agent saved to {filepath}")
+    print(f"Training stats saved to {stats_filepath}")
+
+
+def load_agent_with_stats(filepath: str) -> Tuple[Optional[BaseAgent], Optional[Dict]]:
+    """Load a trained agent and its training statistics from disk.
+    
+    Args:
+        filepath: Path to the saved agent file
+        
+    Returns:
+        Tuple of (agent, training_stats), or (None, None) if files don't exist
+    """
+    if not filepath.endswith('.pkl'):
+        filepath += '.pkl'
+    
+    if not os.path.exists(filepath):
+        return None, None
+    
+    # Load agent
+    with open(filepath, 'rb') as f:
+        agent = pickle.load(f)
+    
+    # Load training stats if they exist
+    stats_filepath = filepath.replace('.pkl', '_stats.pkl')
+    training_stats = None
+    if os.path.exists(stats_filepath):
+        with open(stats_filepath, 'rb') as f:
+            training_stats = pickle.load(f)
+    
+    return agent, training_stats
+
+
 def train_agent(
     agent: BaseAgent,
     env: gym.Env,
@@ -301,11 +357,12 @@ def load_or_train_agents(
         filepath = os.path.join(pretrained_dir, f"{agent_type}.pkl")
         
         if not force_retrain:
-            loaded_agent = load_agent(filepath)
+            loaded_agent, training_stats = load_agent_with_stats(filepath)
             if loaded_agent is not None:
                 if verbose:
-                    print(f"✓ Loaded pre-trained {agent_name} from {filepath}")
-                results[agent_name] = (loaded_agent, None)
+                    stats_msg = " (with training history)" if training_stats else " (no training history)"
+                    print(f"✓ Loaded pre-trained {agent_name} from {filepath}{stats_msg}")
+                results[agent_name] = (loaded_agent, training_stats)
                 continue
         
         # Train from scratch
@@ -314,8 +371,8 @@ def load_or_train_agents(
         
         training_stats = train_agent(agent, env, n_train_episodes, verbose=verbose)
         
-        # Save the trained agent
-        save_agent(agent, filepath)
+        # Save the trained agent with stats
+        save_agent_with_stats(agent, training_stats, filepath)
         
         results[agent_name] = (agent, training_stats)
     
