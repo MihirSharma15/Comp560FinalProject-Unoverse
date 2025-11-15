@@ -9,104 +9,220 @@ Rank 1: Count-Based (k=10)
 
 EVALUATION RESULTS:
   Total Episodes: 10,000
-  Win Rate:  0.4275 (4,275 wins)
-  Loss Rate: 0.4811 (4,811 losses)
-  Draw Rate: 0.0914 (914 draws)
-  Average Reward: -0.0536 ± 0.9517
+  Win Rate:  0.4307 (4,307 wins)
+  Loss Rate: 0.4765 (4,765 losses)
+  Draw Rate: 0.0928 (928 draws)
+  Average Reward: -0.0458 ± 0.9514
 
 TRAINING RESULTS:
   Total Episodes: 250,000
-  Win Rate:  0.4231
-  Loss Rate: 0.4892
-  Draw Rate: 0.0876
-  Average Reward: -0.0661
+  Win Rate:  0.4226
+  Loss Rate: 0.4889
+  Draw Rate: 0.0885
+  Average Reward: -0.0664
 
 EXPLORATION STATISTICS:
   Unique States Visited: 280
-  Total State Visits: 399,314
-  Average Visits per State: 1426.12
-  Median Visits: 814.50
-  Std Dev Visits: 1847.26
-  Min/Max Visits: 92 / 12,644
-  Average Current Epsilon: 0.0220
-  Epsilon Range: [0.0100, 0.0980]
+  Total State Visits: 398,781
+  Average Visits per State: 1424.22
+  Median Visits: 790.00
+  Std Dev Visits: 1831.80
+  Min/Max Visits: 96 / 12,501
+  Average Current Epsilon: 0.0217
+  Epsilon Range: [0.0100, 0.0943]
 
 
 ================================================================================
-Rank 2: Simple (Fixed Epsilon)
-================================================================================
-
-EVALUATION RESULTS:
-  Total Episodes: 10,000
-  Win Rate:  0.4314 (4,314 wins)
-  Loss Rate: 0.4856 (4,856 losses)
-  Draw Rate: 0.0830 (830 draws)
-  Average Reward: -0.0542 ± 0.9561
-
-TRAINING RESULTS:
-  Total Episodes: 250,000
-  Win Rate:  0.3545
-  Loss Rate: 0.5820
-  Draw Rate: 0.0635
-  Average Reward: -0.2274
-
-
-================================================================================
-Rank 3: Threshold-Based
+Rank 2: Count-Based (k=2)
 ================================================================================
 
 EVALUATION RESULTS:
   Total Episodes: 10,000
-  Win Rate:  0.4269 (4,269 wins)
-  Loss Rate: 0.4831 (4,831 losses)
-  Draw Rate: 0.0900 (900 draws)
-  Average Reward: -0.0562 ± 0.9523
+  Win Rate:  0.4322 (4,322 wins)
+  Loss Rate: 0.4784 (4,784 losses)
+  Draw Rate: 0.0894 (894 draws)
+  Average Reward: -0.0462 ± 0.9531
 
 TRAINING RESULTS:
   Total Episodes: 250,000
-  Win Rate:  0.4060
-  Loss Rate: 0.5112
-  Draw Rate: 0.0828
-  Average Reward: -0.1052
+  Win Rate:  0.4236
+  Loss Rate: 0.4879
+  Draw Rate: 0.0885
+  Average Reward: -0.0643
 
 EXPLORATION STATISTICS:
   Unique States Visited: 280
-  Total State Visits: 390,999
-  Average Visits per State: 1396.42
-  Median Visits: 803.50
-  Std Dev Visits: 1819.50
-  Min/Max Visits: 101 / 12,351
-  Average Current Epsilon: 0.1320
-  Epsilon Range: [0.0500, 0.2000]
+  Total State Visits: 403,365
+  Average Visits per State: 1440.59
+  Median Visits: 812.00
+  Std Dev Visits: 1861.41
+  Min/Max Visits: 106 / 12,675
+  Average Current Epsilon: 0.0104
+  Epsilon Range: [0.0100, 0.0185]
 
 
 ================================================================================
-Rank 4: UCB-Style (c=1.0)
+Rank 3: Simple (Fixed Epsilon)
 ================================================================================
 
 EVALUATION RESULTS:
   Total Episodes: 10,000
-  Win Rate:  0.4111 (4,111 wins)
-  Loss Rate: 0.5025 (5,025 losses)
-  Draw Rate: 0.0864 (864 draws)
-  Average Reward: -0.0914 ± 0.9514
+  Win Rate:  0.4280 (4,280 wins)
+  Loss Rate: 0.4771 (4,771 losses)
+  Draw Rate: 0.0949 (949 draws)
+  Average Reward: -0.0491 ± 0.9501
 
 TRAINING RESULTS:
   Total Episodes: 250,000
-  Win Rate:  0.4059
-  Loss Rate: 0.5130
+  Win Rate:  0.3548
+  Loss Rate: 0.5812
+  Draw Rate: 0.0640
+  Average Reward: -0.2264
+
+
+================================================================================
+Rank 4: Count-Based (k=100)
+================================================================================
+
+EVALUATION RESULTS:
+  Total Episodes: 10,000
+  Win Rate:  0.4234 (4,234 wins)
+  Loss Rate: 0.4864 (4,864 losses)
+  Draw Rate: 0.0902 (902 draws)
+  Average Reward: -0.0630 ± 0.9518
+
+TRAINING RESULTS:
+  Total Episodes: 250,000
+  Win Rate:  0.4046
+  Loss Rate: 0.5136
+  Draw Rate: 0.0818
+  Average Reward: -0.1090
+
+EXPLORATION STATISTICS:
+  Unique States Visited: 280
+  Total State Visits: 389,698
+  Average Visits per State: 1391.78
+  Median Visits: 800.50
+  Std Dev Visits: 1796.37
+  Min/Max Visits: 99 / 12,258
+  Average Current Epsilon: 0.1519
+  Epsilon Range: [0.0100, 0.5025]
+
+
+================================================================================
+Rank 5: Threshold-Based
+================================================================================
+
+EVALUATION RESULTS:
+  Total Episodes: 10,000
+  Win Rate:  0.4158 (4,158 wins)
+  Loss Rate: 0.4970 (4,970 losses)
+  Draw Rate: 0.0872 (872 draws)
+  Average Reward: -0.0812 ± 0.9519
+
+TRAINING RESULTS:
+  Total Episodes: 250,000
+  Win Rate:  0.4076
+  Loss Rate: 0.5113
   Draw Rate: 0.0811
-  Average Reward: -0.1070
+  Average Reward: -0.1038
 
 EXPLORATION STATISTICS:
   Unique States Visited: 280
-  Total State Visits: 392,812
-  Average Visits per State: 1402.90
-  Median Visits: 807.00
-  Std Dev Visits: 1792.85
-  Min/Max Visits: 107 / 12,272
-  Average Current Epsilon: 0.1402
-  Epsilon Range: [0.1090, 0.1962]
+  Total State Visits: 390,307
+  Average Visits per State: 1393.95
+  Median Visits: 814.00
+  Std Dev Visits: 1788.69
+  Min/Max Visits: 91 / 12,149
+  Average Current Epsilon: 0.1330
+  Epsilon Range: [0.0500, 0.5000]
+
+
+================================================================================
+Rank 6: UCB-Style (c=1.0)
+================================================================================
+
+EVALUATION RESULTS:
+  Total Episodes: 10,000
+  Win Rate:  0.4104 (4,104 wins)
+  Loss Rate: 0.5044 (5,044 losses)
+  Draw Rate: 0.0852 (852 draws)
+  Average Reward: -0.0940 ± 0.9518
+
+TRAINING RESULTS:
+  Total Episodes: 250,000
+  Win Rate:  0.4063
+  Loss Rate: 0.5119
+  Draw Rate: 0.0819
+  Average Reward: -0.1056
+
+EXPLORATION STATISTICS:
+  Unique States Visited: 280
+  Total State Visits: 393,289
+  Average Visits per State: 1404.60
+  Median Visits: 796.00
+  Std Dev Visits: 1806.05
+  Min/Max Visits: 92 / 12,339
+  Average Current Epsilon: 0.1404
+  Epsilon Range: [0.1090, 0.2037]
+
+
+================================================================================
+Rank 7: Count-Based (k=1000)
+================================================================================
+
+EVALUATION RESULTS:
+  Total Episodes: 10,000
+  Win Rate:  0.3855 (3,855 wins)
+  Loss Rate: 0.5419 (5,419 losses)
+  Draw Rate: 0.0726 (726 draws)
+  Average Reward: -0.1564 ± 0.9502
+
+TRAINING RESULTS:
+  Total Episodes: 250,000
+  Win Rate:  0.3507
+  Loss Rate: 0.5846
+  Draw Rate: 0.0647
+  Average Reward: -0.2338
+
+EXPLORATION STATISTICS:
+  Unique States Visited: 280
+  Total State Visits: 370,914
+  Average Visits per State: 1324.69
+  Median Visits: 811.50
+  Std Dev Visits: 1712.93
+  Min/Max Visits: 103 / 12,185
+  Average Current Epsilon: 0.5558
+  Epsilon Range: [0.0758, 0.9066]
+
+
+================================================================================
+Rank 8: UCB-Style (c=10.0)
+================================================================================
+
+EVALUATION RESULTS:
+  Total Episodes: 10,000
+  Win Rate:  0.3771 (3,771 wins)
+  Loss Rate: 0.5499 (5,499 losses)
+  Draw Rate: 0.0730 (730 draws)
+  Average Reward: -0.1728 ± 0.9472
+
+TRAINING RESULTS:
+  Total Episodes: 250,000
+  Win Rate:  0.3582
+  Loss Rate: 0.5773
+  Draw Rate: 0.0644
+  Average Reward: -0.2191
+
+EXPLORATION STATISTICS:
+  Unique States Visited: 280
+  Total State Visits: 371,595
+  Average Visits per State: 1327.12
+  Median Visits: 794.50
+  Std Dev Visits: 1692.66
+  Min/Max Visits: 103 / 12,049
+  Average Current Epsilon: 0.5103
+  Epsilon Range: [0.1911, 1.0000]
 
 
 ================================================================================

@@ -57,8 +57,8 @@ def main(
     generate_all_visualizations(results, agents_dict, save_dir=output_dir)
     
     print("\n" + "="*80)
-    print("🎉 Comparison complete!")
-    print(f"📁 Results saved to: {output_dir}/")
+    print("Comparison complete!")
+    print(f"Results saved to: {output_dir}/")
     print("="*80 + "\n")
 
 

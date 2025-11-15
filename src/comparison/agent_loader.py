@@ -27,7 +27,7 @@ def get_agent_configs() -> Dict[str, Dict]:
                 "epsilon_decay": None,  # Will be computed based on n_episodes
                 "final_epsilon": 0.01,
                 "discount_factor": 1.0,
-            }
+            },
         },
         "count_based": {
             "name": "Count-Based (k=10)",
@@ -40,7 +40,46 @@ def get_agent_configs() -> Dict[str, Dict]:
                 "discount_factor": 1.0,
                 "strategy": "count_based",
                 "k_param": 10.0,
-            }
+            },
+        },
+        "count_based_high_k": {
+            "name": "Count-Based (k=100)",
+            "class": AdaptiveEpsilonAgent,
+            "params": {
+                "learning_rate": 0.01,
+                "initial_epsilon": 1.0,
+                "epsilon_decay": 0,
+                "final_epsilon": 0.01,
+                "discount_factor": 1.0,
+                "strategy": "count_based",
+                "k_param": 100.0,
+            },
+        },
+        "count_based_low_k": {
+            "name": "Count-Based (k=2)",
+            "class": AdaptiveEpsilonAgent,
+            "params": {
+                "learning_rate": 0.01,
+                "initial_epsilon": 1.0,
+                "epsilon_decay": 0,
+                "final_epsilon": 0.01,
+                "discount_factor": 1.0,
+                "strategy": "count_based",
+                "k_param": 2.0,
+            },
+        },
+        "count_based_ultra_high_k": {
+            "name": "Count-Based (k=1000)",
+            "class": AdaptiveEpsilonAgent,
+            "params": {
+                "learning_rate": 0.01,
+                "initial_epsilon": 1.0,
+                "epsilon_decay": 0,
+                "final_epsilon": 0.01,
+                "discount_factor": 1.0,
+                "strategy": "count_based",
+                "k_param": 1000.0,
+            },
         },
         "ucb": {
             "name": "UCB-Style (c=1.0)",
@@ -53,7 +92,20 @@ def get_agent_configs() -> Dict[str, Dict]:
                 "discount_factor": 1.0,
                 "strategy": "ucb",
                 "c_param": 1.0,
-            }
+            },
+        },
+        "ucb_high_c": {
+            "name": "UCB-Style (c=10.0)",
+            "class": AdaptiveEpsilonAgent,
+            "params": {
+                "learning_rate": 0.01,
+                "initial_epsilon": 0.1,
+                "epsilon_decay": 0,
+                "final_epsilon": 0.01,
+                "discount_factor": 1.0,
+                "strategy": "ucb",
+                "c_param": 10.0,
+            },
         },
         "threshold": {
             "name": "Threshold-Based",
@@ -67,7 +119,7 @@ def get_agent_configs() -> Dict[str, Dict]:
                 "strategy": "threshold",
                 "thresholds": (10, 100, 1000),
                 "epsilon_levels": (0.9, 0.5, 0.2, 0.05),
-            }
+            },
         },
     }
 
