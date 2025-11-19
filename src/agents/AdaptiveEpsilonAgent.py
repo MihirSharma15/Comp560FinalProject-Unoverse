@@ -286,14 +286,14 @@ class AdaptiveEpsilonAgent(SimpleAgent):
         """Prepare agent for pickling by converting defaultdicts to regular dicts.
         
         Returns:
-            Dictionary containing agent state without lambda functions
+            Dictionary containing agent state without lambda functions or env
         """
-        # Get parent class state (handles q_values defaultdict)
+        # Get parent class state (handles q_values defaultdict and removes env)
         state = super().__getstate__()
         
         # Convert additional defaultdicts to regular dicts
-        state['state_counts'] = dict(state['state_counts'])
-        state['epsilon_history'] = dict(state['epsilon_history'])
+        state['state_counts'] = dict(state.get('state_counts', {}))
+        state['epsilon_history'] = dict(state.get('epsilon_history', {}))
         
         return state
     
@@ -307,8 +307,8 @@ class AdaptiveEpsilonAgent(SimpleAgent):
         super().__setstate__(state)
         
         # Recreate additional defaultdicts
-        state_counts_dict = state['state_counts']
-        epsilon_history_dict = state['epsilon_history']
+        state_counts_dict = state.get('state_counts', {})
+        epsilon_history_dict = state.get('epsilon_history', {})
         
         self.state_counts = defaultdict(int)
         self.state_counts.update(state_counts_dict)
