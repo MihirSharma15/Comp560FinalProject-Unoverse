@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import seaborn as sns
+from tqdm import tqdm
 
 from ..agents.BaseAgent import BaseAgent
 from ..agents.SimpleAgent import SimpleAgent
@@ -707,6 +708,150 @@ def plot_learning_convergence(
     plt.close()
 
 
+def plot_individual_learning_convergence(
+    agent_name: str,
+    data: Dict,
+    window_size: int = 10_000,
+    convergence_threshold: float = 0.001,
+    save_path: Optional[str] = None
+) -> None:
+    """Create individual learning convergence plot for a single agent.
+    
+    Shows detailed convergence analysis for one agent including:
+    - Raw reward progression
+    - Rolling average with multiple window sizes
+    - Convergence detection markers
+    - Statistical summary
+    
+    Args:
+        agent_name: Name of the agent
+        data: Agent's training data dictionary
+        window_size: Primary window size for rolling average smoothing
+        convergence_threshold: Threshold for marking convergence point (based on slope)
+        save_path: Optional path to save the figure
+    """
+    if data['train'] is None:
+        print(f"Skipping {agent_name}: no training data available")
+        return
+    
+    rewards = np.array(data['train']['total_rewards'])
+    
+    if len(rewards) < window_size:
+        print(f"Skipping {agent_name}: insufficient training data (need at least {window_size} episodes)")
+        return
+    
+    # Create figure with subplots
+    fig = plt.figure(figsize=(16, 10))
+    gs = fig.add_gridspec(3, 2, hspace=0.3, wspace=0.3)
+    
+    # Main plot: Rolling average with multiple window sizes
+    ax_main = fig.add_subplot(gs[0:2, :])
+    
+    # Use different window sizes for comparison
+    window_sizes = [window_size // 10, window_size // 2, window_size]
+    alphas = [0.3, 0.5, 0.9]
+    linewidths = [1.5, 2.0, 2.5]
+    
+    for ws, alpha, lw in zip(window_sizes, alphas, linewidths):
+        if len(rewards) >= ws:
+            rolling_mean = np.convolve(rewards, np.ones(ws)/ws, mode='valid')
+            x = np.arange(ws-1, len(rewards))
+            ax_main.plot(x, rolling_mean, label=f'Rolling Mean (window={ws:,})', 
+                        linewidth=lw, alpha=alpha)
+    
+    # Find convergence point using primary window size
+    rolling_mean = np.convolve(rewards, np.ones(window_size)/window_size, mode='valid')
+    x = np.arange(window_size-1, len(rewards))
+    
+    if len(rolling_mean) > window_size:
+        slopes = np.diff(rolling_mean)
+        converged_idx = np.where(np.abs(slopes) < convergence_threshold)[0]
+        if len(converged_idx) > 0:
+            convergence_episode = x[converged_idx[0]]
+            ax_main.axvline(x=convergence_episode, color='red', 
+                          linestyle='--', alpha=0.7, linewidth=2,
+                          label=f'Convergence ~{convergence_episode:,}')
+            
+            # Add shaded region for converged area
+            ax_main.axvspan(convergence_episode, len(rewards), 
+                           alpha=0.1, color='green', label='Converged Region')
+    
+    # Customize main plot
+    ax_main.set_xlabel('Training Episode', fontsize=12, fontweight='bold')
+    ax_main.set_ylabel('Average Reward', fontsize=12, fontweight='bold')
+    ax_main.set_title(f'{agent_name}: Learning Convergence Analysis', 
+                     fontsize=14, fontweight='bold')
+    ax_main.legend(fontsize=10, loc='lower right')
+    ax_main.grid(alpha=0.3)
+    ax_main.axhline(y=0, color='black', linestyle='--', linewidth=1, alpha=0.3)
+    
+    # Subplot 1: Reward histogram
+    ax_hist = fig.add_subplot(gs[2, 0])
+    ax_hist.hist(rewards, bins=50, alpha=0.7, color='steelblue', edgecolor='black')
+    ax_hist.axvline(x=np.mean(rewards), color='red', linestyle='--', 
+                   linewidth=2, label=f'Mean: {np.mean(rewards):.3f}')
+    ax_hist.axvline(x=np.median(rewards), color='orange', linestyle='--', 
+                   linewidth=2, label=f'Median: {np.median(rewards):.3f}')
+    ax_hist.set_xlabel('Reward', fontsize=10, fontweight='bold')
+    ax_hist.set_ylabel('Frequency', fontsize=10, fontweight='bold')
+    ax_hist.set_title('Reward Distribution', fontsize=11, fontweight='bold')
+    ax_hist.legend(fontsize=9)
+    ax_hist.grid(alpha=0.3)
+    
+    # Subplot 2: Statistical summary
+    ax_stats = fig.add_subplot(gs[2, 1])
+    ax_stats.axis('off')
+    
+    # Compute statistics
+    stats_text = f"""
+    Training Statistics:
+    ═══════════════════════════════
+    Total Episodes:        {len(rewards):,}
+    
+    Reward Statistics:
+    ─────────────────────────────── 
+    Mean:                 {np.mean(rewards):.4f}
+    Std Dev:              {np.std(rewards):.4f}
+    Median:               {np.median(rewards):.4f}
+    Min:                  {np.min(rewards):.4f}
+    Max:                  {np.max(rewards):.4f}
+    
+    Convergence Analysis:
+    ───────────────────────────────
+    Window Size:          {window_size:,}
+    Threshold:            {convergence_threshold}
+    """
+    
+    if len(rolling_mean) > window_size and len(converged_idx) > 0:
+        convergence_episode = x[converged_idx[0]]
+        pre_convergence = rewards[:convergence_episode]
+        post_convergence = rewards[convergence_episode:]
+        
+        stats_text += f"""Converged At:         {convergence_episode:,}
+    
+    Pre-Convergence Mean: {np.mean(pre_convergence):.4f}
+    Post-Convergence Mean:{np.mean(post_convergence):.4f}
+    Improvement:          {(np.mean(post_convergence) - np.mean(pre_convergence)):.4f}
+    """
+    else:
+        stats_text += """Converged At:         Not detected
+    """
+    
+    ax_stats.text(0.05, 0.95, stats_text, transform=ax_stats.transAxes,
+                 fontsize=10, verticalalignment='top', fontfamily='monospace',
+                 bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.3))
+    
+    plt.suptitle(f'Individual Learning Analysis: {agent_name}', 
+                fontsize=16, fontweight='bold', y=0.995)
+    
+    if save_path:
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        plt.savefig(save_path, dpi=150, bbox_inches='tight')
+        print(f"Saved individual learning convergence plot to {save_path}")
+    
+    plt.close()
+
+
 def plot_convergence_envelope(
     results: Dict[str, Dict],
     window_size: int = 5000,
@@ -730,7 +875,8 @@ def plot_convergence_envelope(
     
     colors = sns.color_palette("husl", len(results))
     
-    for idx, (agent_name, data) in enumerate(results.items()):
+    for idx, (agent_name, data) in tqdm(enumerate(results.items())):
+        tqdm.write(f"Processing {agent_name}")
         ax = axes[idx]
         
         if data['train'] is None:
@@ -753,7 +899,9 @@ def plot_convergence_envelope(
         # Compute rolling percentiles for envelope
         lower_env = []
         upper_env = []
-        for i in range(len(rewards) - window_size + 1):
+        for i in tqdm(range(len(rewards) - window_size + 1), 
+                      desc=f"  Computing envelope for {agent_name}", 
+                      leave=False):
             window = rewards[i:i+window_size]
             lower_env.append(np.percentile(window, envelope_percentiles[0]))
             upper_env.append(np.percentile(window, envelope_percentiles[1]))
@@ -847,7 +995,9 @@ def plot_q_value_change_derivative(
     
     colors = sns.color_palette("husl", len(results))
     
-    for idx, (agent_name, data) in enumerate(results.items()):
+    for idx, (agent_name, data) in tqdm(enumerate(results.items()), 
+                                         total=len(results),
+                                         desc="Processing Q-value derivatives"):
         if data['train'] is None:
             continue
         
@@ -1005,30 +1155,39 @@ def generate_all_visualizations(
     q_mins = {0: float('inf'), 1: float('inf')}
     q_maxs = {0: float('-inf'), 1: float('-inf')}
     
-    for agent in agents_dict.values():
-        if isinstance(agent, SimpleAgent):
-            for action in [0, 1]:
-                for player_sum in player_sums:
-                    for dealer_card in dealer_cards:
-                        for usable_ace in [False, True]:
-                            state = (player_sum, dealer_card, usable_ace)
-                            q_val = agent.get_q_value(state, action)
-                            q_mins[action] = min(q_mins[action], q_val)
-                            q_maxs[action] = max(q_maxs[action], q_val)
+    total_states = len(player_sums) * len(dealer_cards) * 2
+    with tqdm(total=len(agents_dict) * 2 * total_states, 
+              desc="Computing global Q-value ranges") as pbar:
+        for agent in agents_dict.values():
+            if isinstance(agent, SimpleAgent):
+                for action in [0, 1]:
+                    for player_sum in player_sums:
+                        for dealer_card in dealer_cards:
+                            for usable_ace in [False, True]:
+                                state = (player_sum, dealer_card, usable_ace)
+                                q_val = agent.get_q_value(state, action)
+                                q_mins[action] = min(q_mins[action], q_val)
+                                q_maxs[action] = max(q_maxs[action], q_val)
+                                pbar.update(1)
     
     # Compute global epsilon ranges for adaptive agents
     epsilon_min = float('inf')
     epsilon_max = float('-inf')
     
-    for agent in agents_dict.values():
-        if isinstance(agent, AdaptiveEpsilonAgent):
-            for player_sum in player_sums:
-                for dealer_card in dealer_cards:
-                    for usable_ace in [False, True]:
-                        state = (player_sum, dealer_card, usable_ace)
-                        eps_val = agent.get_epsilon_for_state(state)
-                        epsilon_min = min(epsilon_min, eps_val)
-                        epsilon_max = max(epsilon_max, eps_val)
+    adaptive_agents = [a for a in agents_dict.values() if isinstance(a, AdaptiveEpsilonAgent)]
+    if adaptive_agents:
+        with tqdm(total=len(adaptive_agents) * total_states, 
+                  desc="Computing global epsilon ranges") as pbar:
+            for agent in agents_dict.values():
+                if isinstance(agent, AdaptiveEpsilonAgent):
+                    for player_sum in player_sums:
+                        for dealer_card in dealer_cards:
+                            for usable_ace in [False, True]:
+                                state = (player_sum, dealer_card, usable_ace)
+                                eps_val = agent.get_epsilon_for_state(state)
+                                epsilon_min = min(epsilon_min, eps_val)
+                                epsilon_max = max(epsilon_max, eps_val)
+                                pbar.update(1)
     
     # Set limits with small padding
     q_limits_hit = (q_mins[1] * 1.05 if q_mins[1] < 0 else q_mins[1] * 0.95,
@@ -1045,9 +1204,18 @@ def generate_all_visualizations(
     print(f"  Q-value range (Stick): [{q_limits_stick[0]:.3f}, {q_limits_stick[1]:.3f}]")
     print(f"  Epsilon range: [{epsilon_limits[0]:.3f}, {epsilon_limits[1]:.3f}]")
     
-    # 10. Individual agent visualizations with consistent scales
-    for agent_name, agent in agents_dict.items():
-        print(f"\n📈 Creating visualizations for {agent_name}...")
+    # 10. Individual learning convergence plots
+    print("\n📈 Creating individual learning convergence plots...")
+    for agent_name, data in tqdm(results.items(), desc="Creating convergence plots"):
+        safe_name = agent_name.replace(" ", "_").replace("(", "").replace(")", "").replace("=", "")
+        plot_individual_learning_convergence(
+            agent_name, data, window_size=10_000,
+            save_path=os.path.join(save_dir, f"individual_convergence_{safe_name}.png"))
+    
+    # 11. Individual agent visualizations with consistent scales
+    print("\n📈 Creating individual agent visualizations...")
+    for agent_name, agent in tqdm(agents_dict.items(), desc="Processing agents"):
+        tqdm.write(f"  Creating plots for {agent_name}")
         
         # Q-value 3D plots with consistent scales
         safe_name = agent_name.replace(" ", "_").replace("(", "").replace(")", "").replace("=", "")
