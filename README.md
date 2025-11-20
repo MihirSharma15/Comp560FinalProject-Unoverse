@@ -1,5 +1,7 @@
 # Comp560 Final Project - Unoverse (Blackjack RL Agent Comparison)
 
+Slides Deck: https://docs.google.com/presentation/d/19labg7LYWOEc9VMf5BaQ8uGpuzO_Sr9nnQyQg39kyog/edit?usp=sharing
+Final Paper: 
 A comprehensive reinforcement learning project comparing different Q-Learning agents with various exploration strategies on the Blackjack environment. Features both command-line comparison tools and an interactive GUI for visualization.
 
 ## 📋 Table of Contents
